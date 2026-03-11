@@ -46,9 +46,50 @@ def duplicate_random_line(content):
     return "".join(lines), f"Duplicated line {idx}: {lines[idx].rstrip()!r}"
 
 
+def weaken_quantifier(content):
+    """Replace a universal quantifier with an existential one, weakening the statement."""
+    if "∀" in content:
+        return content.replace("∀", "∃", 1), "Replaced ∀ → ∃ (weakened quantifier)"
+    if "\\<forall>" in content:
+        return content.replace("\\<forall>", "\\<exists>", 1), "Replaced \\<forall> → \\<exists>"
+    return content, "No-op (weaken_quantifier: no ∀ found)"
+
+
+def replace_by_with_sorry(content):
+    """Replace a proof tactic (e.g. "by simp") with "by sorry" - don't check the proof"""
+    import re
+    pattern = re.compile(r'\bby\s+\w[\w_]*', re.MULTILINE)
+    match = pattern.search(content)
+    if match:
+        new_content = content[:match.start()] + "by sorry" + content[match.end():]
+        return new_content, f"Replaced '{match.group()}' → 'by sorry'"
+    return content, "No-op (replace_by_with_sorry: no 'by <tactic>' found)"
+
+
+def flip_inequality(content):
+    """Flip an inequality sign to its opposite."""
+    pairs = [
+        (" ≤ ", " ≥ "),
+        (" ≥ ", " ≤ "),
+        (" < ",  " > "),
+        (" > ",  " < "),
+        (" \\<le> ", " \\<ge> "),
+        (" \\<ge> ", " \\<le> "),
+        (" \\<less> ", " \\<greater> "),
+    ]
+    for original, replacement in pairs:
+        if original in content:
+            return content.replace(original, replacement, 1), \
+                   f"Flipped inequality '{original.strip()}' → '{replacement.strip()}'"
+    return content, "No-op (flip_inequality: no inequality found)"
+
+
 ALL_MUTATIONS = [
     swap_and_or,
     negate_condition,
     remove_random_line,
     duplicate_random_line,
+    weaken_quantifier,
+    replace_by_with_sorry,
+    flip_inequality,
 ]
