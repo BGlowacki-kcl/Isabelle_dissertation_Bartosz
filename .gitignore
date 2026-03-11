@@ -1,0 +1,4 @@
+*.txt
+mismatch_*
+*/__pycache__/*
+differential/*.thy
