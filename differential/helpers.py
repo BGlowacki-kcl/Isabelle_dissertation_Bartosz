@@ -46,18 +46,7 @@ def read_until_finished(sock_file):
     return None
 
 def _oracle_has_theory_error(output_text, theory_name):
-    """
-    Returns (has_error, sorted_list_of_error_line_numbers) by scanning for
-    proof/command failures in the user's own theory file.
-    Lines like:
-      *** At command "by" (line 42 of "~/.../.../Test.thy")
-      *** Failed to finish proof (line 58 of "~/.../.../Test.thy"):
-    are real errors.  Internal Isabelle noise like Bad bash_process server
-    address refers to library files and is ignored.
-    """
-    # Two patterns that reference the user's theory file by stem name.
-    # 1) "At command ... (line N of "...Test.thy")"
-    # 2) "Failed to finish proof (line N of "...Test.thy"):"
+    """Return (has_error, sorted_error_line_numbers) for the user's theory file."""
     at_cmd = re.compile(
         r'At command[^\n]+\(line (\d+) of "[^"]*' + re.escape(theory_name) + r'\.thy"\)',
         re.IGNORECASE
@@ -97,8 +86,6 @@ def run_oracle(theory_arg, timeout=500, worker_id=None):
         
         output = result.stdout if result.stdout else result.stderr
 
-        # Determine pass/fail by looking for errors in the user's theory file,
-        # not by exit code (exit code can be non-zero due to library noise).
         has_error, _ = _oracle_has_theory_error(output, theory_name)
 
         if has_error:
@@ -117,14 +104,8 @@ def run_oracle(theory_arg, timeout=500, worker_id=None):
         return False, ""
 
 def _extract_server_errors(server_json_str, theory_name="Test"):
-    """
-    Parse the server JSON and return a list of (line, message_snippet) tuples
-    for every error in the user's theory file.  Ignores errors from library files.
-    Works with:
-      Format A (use_theories):  list of node objects [{node_name, status, messages}, ...]
-      Format B (simpler):       single object {ok, errors: [{kind, message, pos}, ...]}
-    """
-    errors = []   # list of (line_int, msg_str)
+    """Extracts error messages and their line numbers from the server's JSON output."""
+    errors = []  
     thy_filename = f"{theory_name}.thy"
 
     json_start_index = server_json_str.find('[')
@@ -146,8 +127,6 @@ def _extract_server_errors(server_json_str, theory_name="Test"):
                 continue
             pos = msg.get("pos", {})
             fpath = pos.get("file", "")
-            # Only keep errors in the user's theory file (path ends with the
-            # theory filename or is empty).
             if fpath and thy_filename not in fpath:
                 continue
             line = pos.get("line")
@@ -156,7 +135,6 @@ def _extract_server_errors(server_json_str, theory_name="Test"):
                 errors.append((int(line), text))
 
     if isinstance(server_data, dict):
-        # Format B: {ok: bool, errors: [...]}
         if server_data.get("ok") is False or server_data.get("errors"):
             err_list = server_data.get("errors", [])
             for err in err_list:
@@ -170,16 +148,13 @@ def _extract_server_errors(server_json_str, theory_name="Test"):
                 text = err.get("message", "")
                 if line is not None:
                     errors.append((int(line), text))
-            # If ok=False but no parseable error entries, flag a generic error
             if not errors and server_data.get("ok") is False:
                 errors.append((None, "Server ok=false but no error details"))
-        # Format A: single node object with "status" and "messages"
         if not errors and "status" in server_data:
             if not server_data.get("status", {}).get("ok", True):
                 _collect_from_messages(server_data.get("messages", []))
 
     elif isinstance(server_data, list):
-        # Format A: list of node objects
         for node in server_data:
             node_name = node.get("node_name", "")
             status = node.get("status", {})
@@ -193,16 +168,7 @@ def _extract_server_errors(server_json_str, theory_name="Test"):
 
 
 def compare_outputs(server_json_str, oracle_text, theory_name="Test", worker_id=None):
-    """
-    Returns (mismatch, reason, oracle_pass, server_pass, comparison_detail).
-
-    comparison_detail is a dict with:
-        server_error_lines : list[int]          – sorted error lines from server
-        server_errors      : list[(int, str)]   – (line, message_snippet) tuples
-        oracle_error_lines : list[int]          – sorted error lines from oracle
-        oracle_pass        : bool
-        server_pass        : bool
-    """
+    """Compare the server's JSON output with the oracle's text output for the given theory."""
     print(f"--- COMPARISON REPORT (worker {worker_id}) ---\n")
     mismatch_reasons = []
 
@@ -225,9 +191,6 @@ def compare_outputs(server_json_str, oracle_text, theory_name="Test", worker_id=
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(server_json_str)
 
-    # ---------------------------------------------------------
-    # 1. Extract Server Errors (all error lines in the worker's theory)
-    # ---------------------------------------------------------
     try:
         server_errors = _extract_server_errors(server_json_str, theory_name)
     except json.JSONDecodeError:
@@ -241,13 +204,8 @@ def compare_outputs(server_json_str, oracle_text, theory_name="Test", worker_id=
     server_lines = sorted({line for line, _ in server_errors if line is not None})
     server_has_error = bool(server_errors)
 
-    # ---------------------------------------------------------
-    # 2. Extract Oracle Errors (all error lines in the worker's theory)
-    #    Library noise (Bad bash_process, Multiset.thy, etc.) is ignored.
-    # ---------------------------------------------------------
     oracle_has_error, oracle_lines = _oracle_has_theory_error(oracle_text, theory_name)
 
-    # Build the comparison detail dict (always returned)
     detail = {
         "server_error_lines": server_lines,
         "server_errors": [(l, m[:120]) for l, m in server_errors],
@@ -256,20 +214,15 @@ def compare_outputs(server_json_str, oracle_text, theory_name="Test", worker_id=
         "server_pass": not server_has_error,
     }
 
-    # ---------------------------------------------------------
-    # 3. High-Level Outcome Comparison
-    # ---------------------------------------------------------
     if not server_has_error and not oracle_has_error:
         print("[MATCH] Both Server and Oracle: PASS (no errors in theory).")
         return False, "", True, True, detail
 
     if server_has_error and oracle_has_error:
-        # Both failed — check if they agree on the same set of error lines
         if server_lines == oracle_lines:
             print(f"[MATCH] Both failed at the same lines ({oracle_lines}). No bug.")
             return False, "", False, False, detail
         else:
-            # Check if one is a subset of the other — partial match
             common = sorted(set(server_lines) & set(oracle_lines))
             only_server = sorted(set(server_lines) - set(oracle_lines))
             only_oracle = sorted(set(oracle_lines) - set(server_lines))
@@ -303,7 +256,6 @@ def compare_outputs(server_json_str, oracle_text, theory_name="Test", worker_id=
         mismatch_reasons.append(reason)
         return True, "\n".join(mismatch_reasons), True, False, detail
 
-    # oracle_has_error and not server_has_error
     reason = (
         f"Oracle detected proof failures at lines {oracle_lines} in Test.thy, "
         f"but Server reported no errors."
