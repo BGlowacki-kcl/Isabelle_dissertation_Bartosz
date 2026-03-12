@@ -1,5 +1,29 @@
 # Progress Bug Investigation Notes
 
+## Bug Summary
+
+This bug makes Isabelle report that a progress task has been stopped even when no real stop request was made.
+
+That is a problem because the system starts treating normal work as if it had been cancelled. In practice, this can cause later processing to stop early or behave incorrectly for the wrong reason.
+
+This bug is reproduced in this test framework by the test marked as `Test A`.
+
+## Why It Happens
+
+The issue appears when a thread receives an interrupt for an unrelated reason, such as a watchdog timeout or a cancelled future. Instead of treating that interrupt as a temporary thread event, the current logic turns it into a permanent internal `stopped` state.
+
+As a result, the `Progress` object can remember a stop that was never explicitly requested.
+
+## How the Bug Reproduces
+
+1. A piece of Isabelle work is running on a thread.
+2. That thread gets interrupted by another mechanism, such as a watchdog or `Future.cancel()`.
+3. `Progress.stopped` checks the thread's interrupt status.
+4. The code then stores that interrupt as a permanent stopped state.
+5. From that point on, the progress object behaves as if `stop()` had been called, even though it was not.
+
+This is why the test reproduces reliably: it triggers ordinary thread interrupts and shows that they are incorrectly converted into lasting cancellation state.
+
 ## Affected Code
 
 - File: `Isabelle2025/src/Pure/System/progress.scala`
@@ -9,7 +33,7 @@
 
 ```scala
 def stopped: Boolean = {
-   if (Thread.currentThread().isInterrupted()) is_stopped = true
+   if (Thread.interrupted()) is_stopped = true
    is_stopped
 }
 ```
