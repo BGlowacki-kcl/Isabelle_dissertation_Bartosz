@@ -136,3 +136,22 @@ After a fresh rebuild and rerun, `TEST A` no longer reproduced within 10,000 ite
 def stopped: Boolean = is_stopped || Thread.currentThread().isInterrupted()
 ```
 
+
+# Test B
+
+## Non-determinism
+
+Test B is triggered during different iterations, so it is not deterministic. The context is larger.
+
+```text
+[info] ============================================================
+[info]   ProgressBugSimple — up to 10000 iterations each
+[info] ============================================================
+[info] --- TEST B: Future.cancel leaks interrupt ---
+[info] FAILED: TEST B bug triggered at iteration 2
+[info] ============================================================
+[info]   ProgressBugSimple — up to 10000 iterations each
+[info] ============================================================
+[info] --- TEST B: Future.cancel leaks interrupt ---
+[info] FAILED: TEST B bug triggered at iteration 1
+```

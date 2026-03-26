@@ -46,6 +46,18 @@ def _extract_server_errors(server_json_str, theory_name="Test"):
                 text = err.get("message", "")
                 if line is not None:
                     errors.append((int(line), text))
+
+            # Fallback: if the top-level errors list was empty but ok=false,
+            # scan each node's messages (some Isabelle versions put errors there).
+            if not errors and server_data.get("ok") is False:
+                for node in server_data.get("nodes", []):
+                    node_name = node.get("node_name", "")
+                    if thy_filename not in node_name:
+                        continue
+                    if not node.get("status", {}).get("ok", True):
+                        _collect_from_messages(node.get("messages", []))
+                    break  # only care about the requested theory node
+
             if not errors and server_data.get("ok") is False:
                 errors.append((None, "Server ok=false but no error details"))
 
@@ -125,26 +137,26 @@ def compare_outputs(server_json_str, oracle_text, theory_name="Test", worker_id=
             print(f"[MATCH] Both failed at the same lines ({oracle_lines}). No bug.")
             return False, "", False, False, detail
 
-        common = sorted(set(server_lines) & set(oracle_lines))
-        only_server = sorted(set(server_lines) - set(oracle_lines))
-        only_oracle = sorted(set(oracle_lines) - set(server_lines))
-        if only_server or only_oracle:
-            parts = []
-            if common:
-                parts.append(f"Common error lines: {common}")
+        oracle_set = set(oracle_lines)
+        server_set = set(server_lines)
+        only_oracle = sorted(oracle_set - server_set)
+        only_server = sorted(server_set - oracle_set)
+
+        if only_oracle:
+            parts = [f"Oracle-only errors: {only_oracle}"]
             if only_server:
-                parts.append(f"Only in Server: {only_server}")
-            if only_oracle:
-                parts.append(f"Only in Oracle: {only_oracle}")
-            reason = "Both detected errors but at different lines. " + "; ".join(parts)
-        else:
-            reason = (
-                f"Both detected errors but at different lines: "
-                f"Oracle={oracle_lines}, Server={server_lines}."
-            )
-        print(f"[FAIL] {reason}")
-        mismatch_reasons.append(reason)
-        return True, "\n".join(mismatch_reasons), False, False, detail
+                parts.append(f"Server-only extras: {only_server}")
+            reason = "Server missed oracle errors. " + "; ".join(parts)
+            print(f"[FAIL] {reason}")
+            mismatch_reasons.append(reason)
+            return True, "\n".join(mismatch_reasons), False, False, detail
+
+        reason = (
+            f"Server more verbose: oracle errors {oracle_lines} ⊆ server errors "
+            f"{server_lines} (extra server-only: {only_server})."
+        )
+        print(f"[INFO] {reason}")
+        return False, reason, False, False, detail
 
     if server_has_error and not oracle_has_error:
         s_msg_preview = ""

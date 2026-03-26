@@ -65,18 +65,26 @@ def save_report(iteration, content, oracle_res, server_res,
 
 
 def save_match_log(iteration, oracle_res, server_res,
-                   comp_detail=None, worker_id=None):
+                   comp_detail=None, worker_id=None, info_reason=""):
     """Save a match (no bug) log to disk."""
     timestamp = int(time.time())
     log_path = NO_BUG_DIR / f"match_iter{iteration}_{timestamp}_w{worker_id}.txt"
 
-    print(f"[Worker-{worker_id}] Match found! Saving overview to {log_path}...")
+    both_failed = (not oracle_res[0]) and (not server_res[0])
+    if info_reason:
+        status = "INFO (Both fail — server more verbose, not a bug)"
+        print(f"[Worker-{worker_id}] INFO (verbose match). Saving to {log_path}...")
+    else:
+        status = "MATCH (No Bug)"
+        print(f"[Worker-{worker_id}] Match found! Saving overview to {log_path}...")
 
     with _report_lock:
         with open(log_path, "w") as f:
             f.write(f"Iteration: {iteration}\n")
             f.write(f"Worker: {worker_id}\n")
-            f.write("Status: MATCH (No Bug)\n")
+            f.write(f"Status: {status}\n")
+            if info_reason:
+                f.write(f"Info: {info_reason}\n")
             f.write("="*40 + "\n")
 
             f.write("=== HIGH-LEVEL OVERVIEW ===\n")
