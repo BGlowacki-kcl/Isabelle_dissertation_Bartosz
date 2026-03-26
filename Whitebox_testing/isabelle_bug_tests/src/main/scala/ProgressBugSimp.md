@@ -10,6 +10,12 @@ From `Isabelle2025/src/Tools/jEdit/src/isabelle_bug_tests`, run:
 sbt "runMain ProgressBugSimple"
 ```
 
+I case of sbt exception try: 
+
+```bash
+export ISABELLE_HOME=<Your_Isabelle_path>/Isabelle2025
+```
+
 ## Test A — `progress.bash()` watchdog corrupts `stopped`
 
 `progress.bash()` starts a watchdog thread that may call `thread.interrupt()` on the worker once `watchdog_time` expires. If `Progress.stopped()` consumes that interrupt flag, it can permanently set `is_stopped = true` even though `stop()` was never called.
