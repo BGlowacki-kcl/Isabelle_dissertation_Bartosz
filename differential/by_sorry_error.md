@@ -110,7 +110,7 @@ Run #1 — running oracle and PIDE server (parallel)...
 
 ---
 
-## Actual Logs
+## Logs from the original issue finding
 
 ### Oracle (`isabelle build`) output
 
