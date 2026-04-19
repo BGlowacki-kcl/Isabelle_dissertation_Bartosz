@@ -1,4 +1,4 @@
-# Case 2: Server Session State Contamination (iter66–iter71)
+# Case 2: Server Session State Contamination
 
 **Source:** `Risk_Free_Lending.thy` — six consecutive mutations of the same theory
 

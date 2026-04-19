@@ -1,4 +1,4 @@
-# Case 6: Oracle and Server Report Errors at Very Different Positions (iter10, iter80)
+# Case 6: Oracle and Server Report Errors at Very Different Positions
 
 ## What Happens
 

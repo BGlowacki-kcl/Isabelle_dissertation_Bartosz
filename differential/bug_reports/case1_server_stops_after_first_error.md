@@ -1,4 +1,4 @@
-# Case 1: Server Stops After First Error (iter18)
+# Case 1: Server Stops After First Error
 
 **Source:** `Randomised_Social_Choice` / Rankings theory
 

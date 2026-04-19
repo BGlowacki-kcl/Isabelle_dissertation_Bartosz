@@ -1,4 +1,4 @@
-# Case 5: Internal ML Exception Surfacing in Server Mode (iter4, iter6, iter7)
+# Case 5: Internal ML Exception Surfacing in Server Mode
 
 **Source:** `Birkhoff_Finite_Distributive_Lattices.thy`
 

@@ -1,4 +1,4 @@
-# Case 4: Consistent Off-by-One Line Number Discrepancy (iter2, iter86, iter91, iter92, iter98)
+# Case 4: Consistent Off-by-One Line Number Discrepancy
 
 ## What Happens
 

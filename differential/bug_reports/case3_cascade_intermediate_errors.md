@@ -1,4 +1,4 @@
-# Case 3: Server Reports Cascade of Intermediate Errors (iter5, iter7)
+# Case 3: Server Reports Cascade of Intermediate Errors
 
 **Source:** `Median_Of_Medians_Selection.thy`
 
