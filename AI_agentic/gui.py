@@ -33,6 +33,7 @@ def focus_window(win):
 
 
 def screenshot(region=None, save_path=None):
+    """Capture a screenshot of a region (left, top, width, height) or the full screen."""
     if region:
         left, top, width, height = region
         img = ImageGrab.grab(bbox=(left, top, left + width, top + height))
@@ -60,6 +61,7 @@ def hotkey(*keys):
 
 
 def type_code_into_editor(win, code: str):
+    """Select all existing editor text and replace it with code via the clipboard."""
     click_in_window(win, rel_x=0.5, rel_y=0.5)
     time.sleep(0.3)
     hotkey("ctrl", "a")
@@ -68,6 +70,7 @@ def type_code_into_editor(win, code: str):
 
 
 def wait_for_isabelle_ready(win, timeout=90, poll_interval=6) -> bool:
+    """Poll the Isabelle window via vision AI until it reports READY or the timeout expires."""
     print("Waiting for Isabelle to finish processing...")
     start = time.time()
     while time.time() - start < timeout:

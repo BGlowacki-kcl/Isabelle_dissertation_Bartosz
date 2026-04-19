@@ -7,6 +7,8 @@ BLANK_THEORY = "theory Scratch\n  imports Main\nbegin\nend"
 
 
 def run_ai_demo():
+    """Run the contradiction-finder loop: Strategist proposes attacks, Coder writes theories,
+    Vision reads the IDE screen, and the loop continues until a genuine proof of False is found."""
     print("  Isabelle Contradiction Finder — 3-Chat Architecture")
 
     reset_all_chats()

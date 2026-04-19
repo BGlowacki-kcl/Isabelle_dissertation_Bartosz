@@ -8,6 +8,7 @@ _coder_history: list[dict] = []
 
 
 def _chat(system: str, history: list[dict], prompt: str, temperature: float, label: str) -> str:
+    """Send a prompt to the model with full conversation history and append both turns to history."""
     user_msg = {"role": "user", "content": prompt}
     messages = [{"role": "system", "content": system}, *history, user_msg]
     response = client.chat.complete(model=MISTRAL_MODEL, messages=messages, temperature=temperature)
@@ -27,6 +28,7 @@ def chat_coder(prompt: str, temperature: float = 0.2) -> str:
 
 
 def chat_vision(img: Image.Image, prompt: str | None = None, temperature: float = 0.1) -> str:
+    """Encode a PIL image as base64 and send it with an optional prompt to the vision model."""
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     b64 = base64.standard_b64encode(buf.getvalue()).decode("utf-8")
@@ -53,6 +55,7 @@ def reset_all_chats():
 
 
 def sanitize_code(code: str) -> str:
+    """Strip markdown code fences from model output and warn if sorry/oops are present."""
     lines = code.strip().splitlines()
     if lines and lines[0].strip().startswith("```"):
         lines = lines[1:]
