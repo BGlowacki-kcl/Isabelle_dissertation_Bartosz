@@ -59,11 +59,16 @@ def _extract_session_imports(theory_file: Path) -> list:
 
 
 def run_oracle(theory_arg, timeout=ORACLE_TIMEOUT, worker_id=None):
-    theory_name = Path(theory_arg).stem          # e.g. "Test_0"
+    """Build the theory via `isabelle build` and return (passed, output_text).
+
+    Uses a per-worker directory so compiled heaps are cached between iterations.
+    Kills the build process group on timeout and returns False.
+    """
+    theory_name = Path(theory_arg).stem
     script_dir  = Path(__file__).parent.absolute()
     theory_file = script_dir / f"{theory_name}.thy"
 
-    # Per-worker directory persists between runs so dep heaps are cached.
+    # Per-worker directory persists between runs so deep heaps are cached.
     oracle_dir   = script_dir / f".oracle_{worker_id}"
     oracle_dir.mkdir(exist_ok=True)
     session_name = f"OracleSession_{worker_id}"

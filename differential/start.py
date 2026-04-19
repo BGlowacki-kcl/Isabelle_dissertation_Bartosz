@@ -17,6 +17,7 @@ _server_state = {"host": None, "port": None, "password": None}
 
 
 def _cleanup_processes():
+    """Kill any leftover polyml processes to reclaim memory before starting workers."""
     import signal as _signal
     killed = 0
     result = __import__("subprocess").run(
@@ -34,6 +35,7 @@ def _cleanup_processes():
 
 
 def _restart_server(worker_id, known_port):
+    """Restart the Isabelle server under a lock; if another worker already restarted it, adopt their state."""
     with _server_lock:
         if _server_state["port"] != known_port:
             print(f"[Worker-{worker_id}] Server already restarted by another worker "

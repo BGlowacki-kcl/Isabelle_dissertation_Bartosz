@@ -47,8 +47,6 @@ def _extract_server_errors(server_json_str, theory_name="Test"):
                 if line is not None:
                     errors.append((int(line), text))
 
-            # Fallback: if the top-level errors list was empty but ok=false,
-            # scan each node's messages (some Isabelle versions put errors there).
             if not errors and server_data.get("ok") is False:
                 for node in server_data.get("nodes", []):
                     node_name = node.get("node_name", "")
@@ -56,7 +54,7 @@ def _extract_server_errors(server_json_str, theory_name="Test"):
                         continue
                     if not node.get("status", {}).get("ok", True):
                         _collect_from_messages(node.get("messages", []))
-                    break  # only care about the requested theory node
+                    break
 
             if not errors and server_data.get("ok") is False:
                 errors.append((None, "Server ok=false but no error details"))
